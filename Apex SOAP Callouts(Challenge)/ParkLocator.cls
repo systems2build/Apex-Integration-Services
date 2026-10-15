@@ -1,6 +1,11 @@
 public without sharing class ParkLocator {
-    public static List<String> country(String country){
-        ParkService.ParksImplPort park = new ParkService.ParksImplPort();
-        return park.byCountry(country);
+    public class ParkLocatorException extends Exception {}
+    public static List<String> country(String countryName) {
+        if (String.isBlank(countryName)) {
+            throw new ParkLocatorException('Country is required.');
+        }
+        ParkService.ParksImplPort service = new ParkService.ParksImplPort();
+        List<String> result = service.byCountry(countryName.trim());
+        return result == null ? new List<String>() : result;
     }
 }

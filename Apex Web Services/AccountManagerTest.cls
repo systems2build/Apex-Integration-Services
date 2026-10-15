@@ -1,22 +1,38 @@
-@isTest
-private class AccountManagerTest{
-    @isTest
-    static void testGetAccountManager(){
-        Account a = new Account(name = 'TestAccount');
-        insert a;
-        Contact c = new Contact(AccountId = a.Id, FirstName = 'Test', LastName = 'Test');
-        insert c;
-
+@IsTest
+private class AccountManagerTest {
+    private static void setRequest(String path) {
         RestRequest request = new RestRequest();
-        request.requestUri = 
-        'https://yourInstance.salesforce.com/services/apexrest/Accounts/'+a.Id+'/contacts';
+        request.requestURI = path;
         request.httpMethod = 'GET';
         RestContext.request = request;
-
-        Account thisAccount = AccountManager.getAccount();
-        //verify results
-        System.assert(thisAccount != null);
-        System.assertEquals('TestAccount', thisAccount.Name);
+        RestContext.response = new RestResponse();
     }
-
+    @IsTest static void returnsAccountAndContacts() {
+        Account account = new Account(Name = 'Sample Account');
+        insert account;
+        insert new Contact(AccountId = account.Id, FirstName = 'Test', LastName = 'Contact');
+        setRequest('/services/apexrest/Accounts/' + account.Id + '/contacts');
+        Test.startTest();
+        Account result = AccountManager.getAccount();
+        Test.stopTest();
+        System.assertEquals(200, RestContext.response.statusCode);
+        System.assertEquals('Sample Account', result.Name);
+        System.assertEquals(1, result.Contacts.size());
+    }
+    @IsTest static void rejectsNonAccountIdentifier() {
+        Contact record = new Contact(LastName = 'Test');
+        insert record;
+        setRequest('/services/apexrest/Accounts/' + record.Id + '/contacts');
+        System.assertEquals(null, AccountManager.getAccount());
+        System.assertEquals(400, RestContext.response.statusCode);
+    }
+    @IsTest static void returnsNotFoundForDeletedAccount() {
+        Account record = new Account(Name = 'Deleted');
+        insert record;
+        Id recordId = record.Id;
+        delete record;
+        setRequest('/services/apexrest/Accounts/' + recordId + '/contacts');
+        System.assertEquals(null, AccountManager.getAccount());
+        System.assertEquals(404, RestContext.response.statusCode);
+    }
 }
